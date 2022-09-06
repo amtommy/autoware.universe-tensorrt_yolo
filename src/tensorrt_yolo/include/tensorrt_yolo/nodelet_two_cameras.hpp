@@ -55,7 +55,7 @@ private:
   std::vector<image_transport::Publisher> image_pubs_;
   rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr objects_pub_;
   std::vector<rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr> objects_pubs_;
-  std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>> image_subs;
+  std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>> image_subs_;
   
   int batch_size_ = 2;
   rclcpp::TimerBase::SharedPtr timer_;

@@ -43,7 +43,6 @@ namespace object_recognition
 TensorrtYoloNodeletTwoCameras::TensorrtYoloNodeletTwoCameras(const rclcpp::NodeOptions & options)
 : Node("tensorrt_yolo_two_cameras", options)
 {
-  std::cout << "tensorrt_yolo_two_cameras" << std::endl;
   using std::placeholders::_1;
 
   std::string onnx_file = declare_parameter("onnx_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/yolov3_batch2.onnx");
@@ -77,7 +76,6 @@ TensorrtYoloNodeletTwoCameras::TensorrtYoloNodeletTwoCameras(const rclcpp::NodeO
   }
   std::ifstream fs(engine_file);
   const auto calibration_images = getFilePath(calib_image_directory);
-  std::cout << "batch_size_: " << batch_size_ << std::endl;
   if (fs.is_open()) {
     RCLCPP_INFO(this->get_logger(), "Found %s", engine_file.c_str());
     net_ptr_.reset(new yolo::Net(engine_file, false));
@@ -99,9 +97,15 @@ TensorrtYoloNodeletTwoCameras::TensorrtYoloNodeletTwoCameras(const rclcpp::NodeO
   }
   RCLCPP_INFO(this->get_logger(), "Inference engine prepared.");
 
-  using std::chrono_literals::operator""ms;
-  timer_ = rclcpp::create_timer(
-    this, get_clock(), 100ms, std::bind(&TensorrtYoloNodeletTwoCameras::connectCb, this));
+  out_scores_length_ = net_ptr_->getMaxDetections();
+  out_boxes_length_ = net_ptr_->getMaxDetections() * 4;
+  out_classes_length_ = net_ptr_->getMaxDetections();
+  out_scores_ =
+    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_scores_length_);
+  out_boxes_ =
+    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_boxes_length_);
+  out_classes_ =
+    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_classes_length_);
 
   std::lock_guard<std::mutex> lock(connect_mutex_);
   std::vector<std::string> output_image_topic = {"out/image0", "out/image1"};
@@ -114,36 +118,26 @@ TensorrtYoloNodeletTwoCameras::TensorrtYoloNodeletTwoCameras(const rclcpp::NodeO
     image_pubs_[cam_id] = image_transport::create_publisher(this, output_image_topic[cam_id]);
   }
 
-  out_scores_length_ = net_ptr_->getMaxDetections();
-  out_boxes_length_ = net_ptr_->getMaxDetections() * 4;
-  out_classes_length_ = net_ptr_->getMaxDetections();
-  out_scores_ =
-    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_scores_length_);
-  out_boxes_ =
-    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_boxes_length_);
-  out_classes_ =
-    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_classes_length_);
+  image_subs_ = std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>>(batch_size_);
+  TensorrtYoloNodeletTwoCameras::connectCb();
+  // using std::chrono_literals::operator""ms;
+  // timer_ = rclcpp::create_timer(
+  //   this, get_clock(), 100ms, std::bind(&TensorrtYoloNodeletTwoCameras::connectCb, this));
 }
 
 void TensorrtYoloNodeletTwoCameras::connectCb()
 {
-  std::cout << "tensorrt_yolo_two_cameras connectCb" << std::endl;
   using std::placeholders::_1;
   std::lock_guard<std::mutex> lock(connect_mutex_);
-  image_pubs_ = std::vector<image_transport::Publisher>(2);
-  image_subs = std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>>(2);
-  if (!(objects_pubs_[0]->get_subscription_count() == 0 && image_pubs_[0].getNumSubscribers() == 0)) {
-    image_subs[0].subscribe(this, "in/image0");
-    image_subs[1].subscribe(this, "in/image1");
-    typedef message_filters::sync_policies::ExactTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_policy;
-    message_filters::Synchronizer<sync_policy> sync(sync_policy(10), image_subs[0], image_subs[1]);
-    sync.registerCallback(std::bind(&TensorrtYoloNodeletTwoCameras::callback, this, std::placeholders::_1, std::placeholders::_2));
-  }
+  image_subs_[0].subscribe(this, "in/image0");
+  image_subs_[1].subscribe(this, "in/image1");
+  typedef message_filters::sync_policies::ExactTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_policy;
+  message_filters::Synchronizer<sync_policy> sync(sync_policy(10), image_subs_[0], image_subs_[1]);
+  sync.registerCallback(std::bind(&TensorrtYoloNodeletTwoCameras::callback, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void TensorrtYoloNodeletTwoCameras::callback(const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg0, const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg1)
 {
-  std::cout << "tensorrt_yolo_two_cameras callback" << std::endl;
   using Label = autoware_auto_perception_msgs::msg::ObjectClassification;
 
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> in_image_msgs = {in_image_msg0, in_image_msg1};

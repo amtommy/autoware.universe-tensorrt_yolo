@@ -54,7 +54,11 @@ private:
 
   std::vector<image_transport::Publisher> image_pubs_;
   std::vector<rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr> objects_pubs_;
-  std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>> image_subs;
+  std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>> image_subs_;
+
+  using SyncPolicy = message_filters::sync_policies::ExactTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image>;
+  using Sync = message_filters::Synchronizer<SyncPolicy>;
+  typename std::shared_ptr<Sync> sync_ptr_;
   
   int batch_size_ = 3;
   rclcpp::TimerBase::SharedPtr timer_;

@@ -21,6 +21,7 @@
     <remap from="out/objects1" to="$(var output_topic2)"/>
     <remap from="out/image0" to="$(var output_topic0)/debug/image"/>
     <remap from="out/image1" to="$(var output_topic1)/debug/image"/>
+    <remap from="out/image2" to="$(var output_topic2)/debug/image"/>
     <param name="onnx_file" type="str" value="$(find-pkg-share tensorrt_yolo)/data/$(var yolo_type)_batch$(var image_number).onnx"/>
     <param name="engine_file" type="str" value="$(var engine_file)"/>
     <param name="label_file" type="str" value="$(find-pkg-share tensorrt_yolo)/data/$(var label_file)"/>
