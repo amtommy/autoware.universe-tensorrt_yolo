@@ -107,7 +107,6 @@ TensorrtYoloNodeletTwoCameras::TensorrtYoloNodeletTwoCameras(const rclcpp::NodeO
   out_classes_ =
     std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_classes_length_);
 
-  std::lock_guard<std::mutex> lock(connect_mutex_);
   std::vector<std::string> output_image_topic = {"out/image0", "out/image1"};
   std::vector<std::string> output_object_topic = {"out/objects0", "out/objects1"};
   objects_pubs_ = std::vector<rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr>(batch_size_);
@@ -119,29 +118,22 @@ TensorrtYoloNodeletTwoCameras::TensorrtYoloNodeletTwoCameras(const rclcpp::NodeO
   }
 
   image_subs_ = std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>>(batch_size_);
-  TensorrtYoloNodeletTwoCameras::connectCb();
-  // using std::chrono_literals::operator""ms;
-  // timer_ = rclcpp::create_timer(
-  //   this, get_clock(), 100ms, std::bind(&TensorrtYoloNodeletTwoCameras::connectCb, this));
-}
-
-void TensorrtYoloNodeletTwoCameras::connectCb()
-{
-  using std::placeholders::_1;
-  std::lock_guard<std::mutex> lock(connect_mutex_);
-  image_subs_[0].subscribe(this, "in/image0");
-  image_subs_[1].subscribe(this, "in/image1");
-  typedef message_filters::sync_policies::ExactTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_policy;
-  message_filters::Synchronizer<sync_policy> sync(sync_policy(10), image_subs_[0], image_subs_[1]);
-  sync.registerCallback(std::bind(&TensorrtYoloNodeletTwoCameras::callback, this, std::placeholders::_1, std::placeholders::_2));
+  // image_subs_[0].subscribe(this, "in/image0");
+  // image_subs_[1].subscribe(this, "in/image1");
+  image_subs_[0].subscribe(this, "/cam/front_bottom_60");
+  image_subs_[1].subscribe(this, "/cam/front_top_close_120");
+  sync_ptr_ = std::make_shared<Sync>(SyncPolicy(10), image_subs_[0], image_subs_[1]);
+  sync_ptr_->registerCallback(std::bind(&TensorrtYoloNodeletTwoCameras::callback, this, std::placeholders::_1, std::placeholders::_2));
+  RCLCPP_INFO(this->get_logger(), "Register Callback done.");
 }
 
 void TensorrtYoloNodeletTwoCameras::callback(const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg0, const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg1)
 {
+  RCLCPP_INFO(this->get_logger(), "Callback start.");
   using Label = autoware_auto_perception_msgs::msg::ObjectClassification;
 
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> in_image_msgs = {in_image_msg0, in_image_msg1};
-  std::vector<cv_bridge::CvImagePtr> in_image_ptrs;
+  std::vector<cv_bridge::CvImagePtr> in_image_ptrs(batch_size_);
   std::vector<cv::Mat> images(batch_size_);
   try {
     in_image_ptrs[0] = cv_bridge::toCvCopy(in_image_msg0, sensor_msgs::image_encodings::BGR8);
@@ -152,6 +144,7 @@ void TensorrtYoloNodeletTwoCameras::callback(const sensor_msgs::msg::Image::Cons
   }
   images[0] = in_image_ptrs[0]->image;
   images[1] = in_image_ptrs[1]->image;
+
   if (!net_ptr_->detect(
         images, out_scores_.get(), out_boxes_.get(), out_classes_.get())) {
     RCLCPP_WARN(this->get_logger(), "Fail to inference");

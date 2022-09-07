@@ -45,7 +45,6 @@ class TensorrtYoloNodeletTwoCameras : public rclcpp::Node
 {
 public:
   explicit TensorrtYoloNodeletTwoCameras(const rclcpp::NodeOptions & options);
-  void connectCb();
   void callback(const sensor_msgs::msg::Image::ConstSharedPtr image_msg0, const sensor_msgs::msg::Image::ConstSharedPtr image_msg1);
   bool readLabelFile(const std::string & filepath, std::vector<std::string> * labels);
 
@@ -53,10 +52,13 @@ private:
   std::mutex connect_mutex_;
 
   std::vector<image_transport::Publisher> image_pubs_;
-  rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr objects_pub_;
   std::vector<rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr> objects_pubs_;
   std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>> image_subs_;
   
+  using SyncPolicy = message_filters::sync_policies::ExactTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image>;
+  using Sync = message_filters::Synchronizer<SyncPolicy>;
+  typename std::shared_ptr<Sync> sync_ptr_;
+
   int batch_size_ = 2;
   rclcpp::TimerBase::SharedPtr timer_;
 

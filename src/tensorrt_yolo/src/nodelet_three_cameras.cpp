@@ -47,7 +47,7 @@ TensorrtYoloNodeletThreeCameras::TensorrtYoloNodeletThreeCameras(const rclcpp::N
 
   std::string onnx_file = declare_parameter("onnx_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/yolov3_batch3.onnx");
   std::string engine_file = declare_parameter("engine_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/yolov3_batch3.engine");
-  std::string label_file = declare_parameter("label_file", "");
+  std::string label_file = declare_parameter("label_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/coco.names");
   std::string calib_image_directory = declare_parameter("calib_image_directory", "");
   std::string calib_cache_file = declare_parameter("calib_cache_file", "");
   std::string mode = declare_parameter("mode", "FP32");
@@ -74,6 +74,7 @@ TensorrtYoloNodeletThreeCameras::TensorrtYoloNodeletThreeCameras(const rclcpp::N
   if (!readLabelFile(label_file, &labels_)) {
     RCLCPP_ERROR(this->get_logger(), "Could not find label file");
   }
+
   std::ifstream fs(engine_file);
   const auto calibration_images = getFilePath(calib_image_directory);
   if (fs.is_open()) {
@@ -107,7 +108,6 @@ TensorrtYoloNodeletThreeCameras::TensorrtYoloNodeletThreeCameras(const rclcpp::N
   out_classes_ =
     std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * net_ptr_->getMaxDetections());
 
-  // std::lock_guard<std::mutex> lock(connect_mutex_);
   std::vector<std::string> output_image_topic = {"out/image0", "out/image1", "out/image2"};
   std::vector<std::string> output_object_topic = {"out/objects0", "out/objects1", "out/objects2"};
   objects_pubs_ = std::vector<rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr>(batch_size_);
@@ -128,6 +128,7 @@ TensorrtYoloNodeletThreeCameras::TensorrtYoloNodeletThreeCameras(const rclcpp::N
 
 void TensorrtYoloNodeletThreeCameras::callback(const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg0, const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg1, const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg2)
 {
+  RCLCPP_INFO(this->get_logger(), "Callback start.");
   using Label = autoware_auto_perception_msgs::msg::ObjectClassification;
 
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> in_image_msgs = {in_image_msg0, in_image_msg1, in_image_msg2};
@@ -141,7 +142,6 @@ void TensorrtYoloNodeletThreeCameras::callback(const sensor_msgs::msg::Image::Co
     RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
     return;
   }
-
   images[0] = in_image_ptrs[0]->image;
   images[1] = in_image_ptrs[1]->image;
   images[2] = in_image_ptrs[2]->image;
@@ -185,6 +185,7 @@ void TensorrtYoloNodeletThreeCameras::callback(const sensor_msgs::msg::Image::Co
         object.object.classification.front().label = Label::UNKNOWN;
       }
       out_objects.feature_objects.push_back(object);
+
       const auto left = std::max(0, static_cast<int>(object.feature.roi.x_offset));
       const auto top = std::max(0, static_cast<int>(object.feature.roi.y_offset));
       const auto right =

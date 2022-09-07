@@ -18,7 +18,7 @@
     <remap from="in/image1" to="$(var input_topic2)"/>
     <remap from="out/objects0" to="$(var output_topic0)"/>
     <remap from="out/objects1" to="$(var output_topic1)"/>
-    <remap from="out/objects1" to="$(var output_topic2)"/>
+    <remap from="out/objects2" to="$(var output_topic2)"/>
     <remap from="out/image0" to="$(var output_topic0)/debug/image"/>
     <remap from="out/image1" to="$(var output_topic1)/debug/image"/>
     <remap from="out/image2" to="$(var output_topic2)/debug/image"/>

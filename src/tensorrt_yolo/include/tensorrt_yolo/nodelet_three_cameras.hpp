@@ -45,7 +45,6 @@ class TensorrtYoloNodeletThreeCameras : public rclcpp::Node
 {
 public:
   explicit TensorrtYoloNodeletThreeCameras(const rclcpp::NodeOptions & options);
-  void connectCb();
   void callback(const sensor_msgs::msg::Image::ConstSharedPtr image_msg0, const sensor_msgs::msg::Image::ConstSharedPtr image_msg1, const sensor_msgs::msg::Image::ConstSharedPtr image_msg2);
   bool readLabelFile(const std::string & filepath, std::vector<std::string> * labels);
 
