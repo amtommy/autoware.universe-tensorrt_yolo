@@ -15,7 +15,7 @@
   <node pkg="tensorrt_yolo" exec="tensorrt_yolo_three_cameras_node" name="$(anon tensorrt_yolo)" output="screen">
     <remap from="in/image0" to="$(var input_topic0)"/>
     <remap from="in/image1" to="$(var input_topic1)"/>
-    <remap from="in/image1" to="$(var input_topic2)"/>
+    <remap from="in/image2" to="$(var input_topic2)"/>
     <remap from="out/objects0" to="$(var output_topic0)"/>
     <remap from="out/objects1" to="$(var output_topic1)"/>
     <remap from="out/objects2" to="$(var output_topic2)"/>

@@ -137,7 +137,7 @@ void TensorrtYoloNodeletThreeCameras::callback(const sensor_msgs::msg::Image::Co
   try {
     in_image_ptrs[0] = cv_bridge::toCvCopy(in_image_msg0, sensor_msgs::image_encodings::BGR8);
     in_image_ptrs[1] = cv_bridge::toCvCopy(in_image_msg1, sensor_msgs::image_encodings::BGR8);
-    in_image_ptrs[2] = cv_bridge::toCvCopy(in_image_msg1, sensor_msgs::image_encodings::BGR8);
+    in_image_ptrs[2] = cv_bridge::toCvCopy(in_image_msg2, sensor_msgs::image_encodings::BGR8);
   } catch (cv_bridge::Exception & e) {
     RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
     return;
