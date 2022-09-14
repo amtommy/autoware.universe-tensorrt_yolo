@@ -45,8 +45,8 @@ TensorrtYoloNodeletTwoCameras::TensorrtYoloNodeletTwoCameras(const rclcpp::NodeO
 {
   using std::placeholders::_1;
 
-  std::string onnx_file = declare_parameter("onnx_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/yolov3_batch2.onnx");
-  std::string engine_file = declare_parameter("engine_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/yolov3_batch2.engine");
+  std::string onnx_file = declare_parameter("onnx_file", "");
+  std::string engine_file = declare_parameter("engine_file", "");
   std::string label_file = declare_parameter("label_file", "");
   std::string calib_image_directory = declare_parameter("calib_image_directory", "");
   std::string calib_cache_file = declare_parameter("calib_cache_file", "");
@@ -118,18 +118,14 @@ TensorrtYoloNodeletTwoCameras::TensorrtYoloNodeletTwoCameras(const rclcpp::NodeO
   }
 
   image_subs_ = std::vector<message_filters::Subscriber<sensor_msgs::msg::Image>>(batch_size_);
-  // image_subs_[0].subscribe(this, "in/image0");
-  // image_subs_[1].subscribe(this, "in/image1");
-  image_subs_[0].subscribe(this, "/cam/front_bottom_60");
-  image_subs_[1].subscribe(this, "/cam/front_top_close_120");
+  image_subs_[0].subscribe(this, "in/image0");
+  image_subs_[1].subscribe(this, "in/image1");
   sync_ptr_ = std::make_shared<Sync>(SyncPolicy(10), image_subs_[0], image_subs_[1]);
   sync_ptr_->registerCallback(std::bind(&TensorrtYoloNodeletTwoCameras::callback, this, std::placeholders::_1, std::placeholders::_2));
-  RCLCPP_INFO(this->get_logger(), "Register Callback done.");
 }
 
 void TensorrtYoloNodeletTwoCameras::callback(const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg0, const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg1)
 {
-  RCLCPP_INFO(this->get_logger(), "Callback start.");
   using Label = autoware_auto_perception_msgs::msg::ObjectClassification;
 
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> in_image_msgs = {in_image_msg0, in_image_msg1};

@@ -45,9 +45,9 @@ TensorrtYoloNodeletThreeCameras::TensorrtYoloNodeletThreeCameras(const rclcpp::N
 {
   using std::placeholders::_1;
 
-  std::string onnx_file = declare_parameter("onnx_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/yolov3_batch3.onnx");
-  std::string engine_file = declare_parameter("engine_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/yolov3_batch3.engine");
-  std::string label_file = declare_parameter("label_file", "./install/tensorrt_yolo/share/tensorrt_yolo/data/coco.names");
+  std::string onnx_file = declare_parameter("onnx_file", "");
+  std::string engine_file = declare_parameter("engine_file", "");
+  std::string label_file = declare_parameter("label_file", "");
   std::string calib_image_directory = declare_parameter("calib_image_directory", "");
   std::string calib_cache_file = declare_parameter("calib_cache_file", "");
   std::string mode = declare_parameter("mode", "FP32");
@@ -102,11 +102,11 @@ TensorrtYoloNodeletThreeCameras::TensorrtYoloNodeletThreeCameras(const rclcpp::N
   out_boxes_length_ = net_ptr_->getMaxDetections() * 4;
   out_classes_length_ = net_ptr_->getMaxDetections();
   out_scores_ =
-    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * net_ptr_->getMaxDetections());
+    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_scores_length_);
   out_boxes_ =
-    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * net_ptr_->getMaxDetections() * 4);
+    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_boxes_length_);
   out_classes_ =
-    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * net_ptr_->getMaxDetections());
+    std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * out_classes_length_);
 
   std::vector<std::string> output_image_topic = {"out/image0", "out/image1", "out/image2"};
   std::vector<std::string> output_object_topic = {"out/objects0", "out/objects1", "out/objects2"};
@@ -128,7 +128,6 @@ TensorrtYoloNodeletThreeCameras::TensorrtYoloNodeletThreeCameras(const rclcpp::N
 
 void TensorrtYoloNodeletThreeCameras::callback(const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg0, const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg1, const sensor_msgs::msg::Image::ConstSharedPtr in_image_msg2)
 {
-  RCLCPP_INFO(this->get_logger(), "Callback start.");
   using Label = autoware_auto_perception_msgs::msg::ObjectClassification;
 
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> in_image_msgs = {in_image_msg0, in_image_msg1, in_image_msg2};
