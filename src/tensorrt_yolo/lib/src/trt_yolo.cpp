@@ -225,7 +225,6 @@ Net::Net(
     network->markOutput(*output);
   }
 
-  std::cout << "max_batch_size: " << max_batch_size << std::endl;
   // create profile
   auto profile = builder->createOptimizationProfile();
   profile->setDimensions(
